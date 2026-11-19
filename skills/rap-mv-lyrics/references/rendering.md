@@ -1,4 +1,7 @@
-# Rendering — engines, alpha formats, compositing
+# Rendering — engines, alpha formats, cutting, grading, compositing
+
+Everything here runs offline: ffmpeg and Pillow only. No API key, no network,
+no paid service.
 
 ## Cue sheet sources
 
@@ -8,7 +11,7 @@ source. See `cue-sheet.md` for the formats; the commands are:
 ```bash
 # human-tapped (no ASR needed)
 python3 helpers/from_ctl.py song.json lyrics.txt -o cues.json [--transcript asr.json]
-# word-level ASR
+# word-level ASR, if a transcript already exists
 python3 helpers/make_cue_sheet.py transcript.json lyrics.txt -o cues.json
 ```
 
@@ -17,6 +20,7 @@ python3 helpers/make_cue_sheet.py transcript.json lyrics.txt -o cues.json
 | Need | Engine |
 |---|---|
 | Core caption style (any theme: two-tone, glow/stroke, hardcut/fade, stickers) | `helpers/render_captions.py` (PIL + ffmpeg). Theme-aware — reads the cues.json `theme` block and per-cue overrides. Fast, deterministic, iterates in seconds. |
+| Cutting, grading, concatenating, final composite | plain ffmpeg — recipes below |
 | Tier-2 3D emphasis with real perspective/material | Remotion or HyperFrames sub-agent (one slot per cue, parallel), OR the script's pseudo-3D if budget is tight. Pseudo-3D reads correctly at phone size — try it first (`motion.md`). |
 | Karaoke word-by-word motion | Remotion/HyperFrames sub-agent only — not in the bundled script. |
 | Props (money rain, mic, bag — any sticker props the theme's imagery calls for) | sticker assets / sprite sequences, composited as separate overlays; not the caption renderer's job. |
@@ -32,6 +36,60 @@ Captions go onto footage in the composite step, at the end of the pipeline.
 - `mov`: ProRes 4444 (`prores_ks -profile:v 4 -pix_fmt yuva444p10le`) when
   going into an NLE or when VP9 banding shows on the glow gradients.
 - `pngseq`: fallback for debugging individual frames.
+
+## Cutting (offline ffmpeg)
+
+Per-segment extract, then a lossless concat. Audio fades at every boundary are
+not optional — without them each cut is an audible pop.
+
+```bash
+# 1. extract one segment, uniform codec params across ALL segments
+ffmpeg -ss 12.40 -to 18.60 -i source.mp4 \
+  -vf "scale=1080:1920" -r 30 \
+  -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p \
+  -c:a aac -b:a 192k \
+  -af "afade=t=in:st=0:d=0.03,afade=t=out:st=6.17:d=0.03" \
+  seg_01.mp4
+
+# 2. lossless concat — no re-encode
+printf "file '%s'\n" "$PWD"/seg_*.mp4 > _concat.txt
+ffmpeg -f concat -safe 0 -i _concat.txt -c copy base.mp4
+```
+
+Rules that bite:
+- Every segment must share resolution, fps, pixel format, and audio codec, or
+  the `-c copy` concat fails or desyncs.
+- `afade=t=out:st=` is measured from **segment** start, so it is
+  `duration - 0.03`, not the clip's absolute end.
+- Cut on word boundaries where vocals exist, padded 30–200 ms. Never cut inside
+  a word.
+
+## Grading (offline ffmpeg)
+
+The finale and the tighter looks need a footage grade. Do it here, before the
+caption overlay goes on — never after.
+
+```bash
+# B&W finale grade with a soft radial falloff toward the edges
+ffmpeg -i base.mp4 -vf "hue=s=0,vignette=PI/5,eq=contrast=1.12" \
+  -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a copy graded.mp4
+```
+
+Useful pieces for the documented looks:
+
+| Look | Filter |
+|---|---|
+| B&W | `hue=s=0` |
+| Bleach / blown highlights | `curves=master='0/0 0.5/0.55 1/1',eq=brightness=0.06` |
+| Negative | `negate` |
+| Freeze + spotlight | freeze the frame, then `vignette=PI/4` on the still |
+| Crush blacks | `curves=master='0/0 0.15/0.02 1/1'` |
+| Warm cinematic | `eq=contrast=1.06,curves=master='0/0 0.25/0.23 0.75/0.77 1/1'` |
+| Subtle auto-correct | `eq=contrast=1.03:saturation=0.98` |
+
+For a bounded auto-grade, sample the clip's `signalstats`
+(`ffmpeg -vf fps=2,signalstats,metadata=print`) and correct toward a target
+YAVG, keeping every axis inside ±8%. Do not apply creative LUTs blind.
 
 ## Compositing rules (order is correctness, not preference)
 
@@ -64,6 +122,19 @@ Captions go onto footage in the composite step, at the end of the pipeline.
    `output_time = source_time - segment_start + segment_offset`. Keep one
    master cues.json in source time and generate a rebased copy per timeline —
    edit times in one place only.
+
+### Loudness, if the mix needs it
+
+Normalise once, on the final audio, after every cut and overlay:
+
+```bash
+ffmpeg -i out.mp4 -af loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json \
+  -c:v copy -c:a aac -b:a 192k final.mp4
+```
+
+`-14 LUFS` is the short-video target. Print the JSON first and check the
+measured values before committing to a single-pass encode.
+
 
 ## Legibility verification (render → look before delivering)
 

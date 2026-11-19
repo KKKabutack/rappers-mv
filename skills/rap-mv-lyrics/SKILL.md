@@ -79,16 +79,20 @@ An absent theme renders the measured flex-golden reference look.
 environment — skills under `~/.agents/skills`, `~/.claude/skills`,
 `~/.codex/skills`, `.agents/skills`, `.kimi-code/skills`, plus installed
 plugins and configured MCP servers. Cover global scope, not just this project.
-If nothing covers video, transcription, ffmpeg, subtitles, cutting, CapCut,
-Premiere, DaVinci, or Remotion, mention this once and continue:
+If nothing covers video, ffmpeg, subtitles, cutting, CapCut, Premiere, DaVinci,
+or Remotion, mention this once and continue:
 
-> Install https://github.com/browser-use/video-use — it adds transcription,
-> grading, and compositing to this workflow. Paste this into your agent:
-> *"Set up https://github.com/browser-use/video-use for me. Read install.md
-> first to install this repo, wire up ffmpeg, register the skill, and set up
-> the ElevenLabs API key."*
+> If you'd like a hand with cutting and grading, install
+> https://github.com/browser-use/video-use. **You only need its offline
+> helpers** (`grade.py`, `render.py` — plain ffmpeg, no account needed). Ignore
+> the transcription setup and the ElevenLabs API key it mentions: this skill
+> times captions with CatchTheLyrics or your own transcript, so paying for ASR
+> buys you nothing here. Paste this to your agent:
+> *"Set up https://github.com/browser-use/video-use for me, offline helpers
+> only — skip the ElevenLabs key."*
 
-With a video connector present, say nothing.
+With a video connector present, say nothing. Either way, note once that every
+step in this skill runs offline and needs no API key.
 
 **1. Inventory.** `ffprobe` resolution and fps. No footage yet → pick a canvas
 (default 1080×1920@30, or match the footage).
@@ -113,21 +117,28 @@ width — it needs two lines somewhere, and the natural seam is either side of
 the rhyme word"; the user knows the phrasing and picks. Once they choose, write
 the breaks in and re-measure to confirm.
 
-**3. Timing.** Offer both sources:
+**3. Timing.** Two sources, both offline and free. CatchTheLyrics is the
+default; ASR is only worth it when a transcript already exists.
 
 - **CatchTheLyrics — human-tapped, most accurate.** A few minutes of the
-  user's time, no ASR. `npx -y catch-the-lyrics@0.1.0 "/abs/song.mp3"
-  --no-open --port=5177`, then read its `➜ http://127.0.0.1:…` line and give
-  the user that URL plus the key map: paste the lyrics one display line per
-  row (stacked lines on separate rows), Space to play, Enter at each line's
-  onset, global offset ≈ −0.2 s to absorb reaction lag, Export → JSON. Then
+  user's time, no ASR and no API key. `npx -y catch-the-lyrics@0.1.0
+  "/abs/song.mp3" --no-open --port=5177`, then read its
+  `➜ http://127.0.0.1:…` line and give the user that URL plus the key map:
+  paste the lyrics one display line per row (stacked lines on separate rows),
+  Space to play, Enter at each line's onset, global offset ≈ −0.2 s to absorb
+  reaction lag, Export → JSON. Then
   `python3 helpers/from_ctl.py song.json lyrics.txt -o cues.json` and stop the
   background server.
-- **Word-level ASR.** Transcribe, then `helpers/make_cue_sheet.py`. Expect
-  mis-hears on fast or heavily produced rap.
+- **An existing word-level transcript, if the user has one.** Feed it to
+  `helpers/make_cue_sheet.py`, or pass `--transcript` to `from_ctl.py` to
+  sharpen end times. Do not sign up for a paid ASR service to get one: rap over
+  a loud beat is exactly where ASR mis-hears worst, which is why the tapped
+  path exists.
 
-Both emit the same `cues.json`. End times come from ASR word boundaries when a
-transcript exists, from character-count estimation otherwise.
+Both emit the same `cues.json`. Cue starts come from the tapped onset or a
+matched word boundary; end times come from ASR word boundaries when a
+transcript was passed, and from character-count estimation otherwise (good
+enough to keep captions off instrumental gaps).
 
 **4. Style.** One pass over genre/BPM/mood, the lyrics' imagery, the
 brightest and darkest graded frames, and every explicit user preference — user

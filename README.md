@@ -45,15 +45,26 @@ ln -sfn ~/Developer/rappers-mv/skills/rap-mv-lyrics ~/.agents/skills/rap-mv-lyri
 
 ## Requirements
 
+Everything runs **offline**. No API key, no account, no paid service.
+
 - **Python 3** with **Pillow** — the caption renderer
-- **ffmpeg** on `PATH` — encoding the overlay and compositing it
+- **ffmpeg** on `PATH` — cutting, grading, encoding the overlay, compositing
 - Fonts: the renderer defaults to macOS system fonts (Songti, Apple Color
   Emoji). On other platforms pass `--font` and `--emoji-font`.
 
-Optional, and detected rather than assumed:
+Optional:
 
-- **CatchTheLyrics** (`npx catch-the-lyrics`) for hand-tapped timing
-- A word-level ASR transcript, if you have one, for cue end times
+- **CatchTheLyrics** (`npx catch-the-lyrics`) for hand-tapped timing — the
+  default and most accurate timing source
+- A word-level transcript, *if you already have one*, to sharpen cue end times
+
+> **On video-use:** if you use
+> [video-use](https://github.com/browser-use/video-use) alongside this plugin,
+> you only need its **offline helpers** (`grade.py`, `render.py` — plain
+> ffmpeg). Skip its ElevenLabs setup: transcribing with a paid ASR service buys
+> nothing here, because hand-tapped timing is both free and more accurate on
+> rap. `references/rendering.md` also carries the cut/grade/composite ffmpeg
+> recipes inline, so video-use is a convenience, not a requirement.
 
 ## What the caption skill contains
 

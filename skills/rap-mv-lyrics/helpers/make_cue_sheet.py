@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
-"""make_cue_sheet.py — align lyric lines to word-level ASR timestamps.
+"""make_cue_sheet.py — align lyric lines to word-level timestamps.
+
+Optional path. CatchTheLyrics (helpers/from_ctl.py) is the default timing
+source and needs no ASR; use this script when a word-level transcript already
+exists and you want cue ends snapped to real word boundaries.
 
 Usage:
     python3 make_cue_sheet.py transcript.json lyrics.txt -o cues.json \
         [--fps 60] [--canvas 1080x1920] [--audio-ref song.wav]
 
-transcript.json: video-use Scribe cache format {"words":[{"text","start","end"},...]}.
+transcript.json: any object with a top-level "words" array of
+{"text", "start", "end"} in seconds. Optional "type": "spacing" entries are
+skipped. Most word-level ASR exports can be reshaped to this in a line or two.
+
 lyrics.txt format: see references/cue-sheet.md in this skill (| splits stacked
-lines, trailing * / ** mark emphasis, @<char> attaches emoji, "SHOUT TO: x"
-marks outro).
+lines, {word} lifts a rhyme span, trailing * / ** mark emphasis, @<char>
+attaches emoji, "SHOUT TO: x" marks outro).
 
 Unaligned cues are reported and flagged "aligned": false — fix them by hand
 in cues.json before rendering. Prints a table of all cues when done.
