@@ -1,0 +1,20 @@
+{
+  "name": "rappers-mv",
+  "version": "0.1.0",
+  "description": "Rap/hip-hop music-video craft. One skill today (rap-mv-lyrics); built to grow.",
+  "owner": { "name": "Huidong Wang", "url": "https://github.com/KKKabutack" },
+  "plugins": [
+    {
+      "name": "rappers-mv",
+      "source": ".",
+      "version": "0.1.0",
+      "description": "Kinetic lyric captions for rap and hip-hop: theme derivation, keyframed timing, transparent overlay rendering.",
+      "displayName": "Rappers MV",
+      "displayName_i18n": { "zh-CN": "说唱 MV" },
+      "description_i18n": {
+        "zh-CN": "说唱/嘻哈 MV 动态字幕：风格推导、打轴定时、透明 overlay 渲染。"
+      },
+      "category": "other"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "rappers-mv",
+  "version": "0.1.0",
+  "description": "Rap/hip-hop music-video craft: kinetic lyric captions, keyframed timing, transparent overlays.",
+  "author": { "name": "Huidong Wang", "url": "https://github.com/KKKabutack" },
+  "repository": "https://github.com/KKKabutack/rappers-mv",
+  "license": "MIT",
+  "skills": "./skills"
+}
